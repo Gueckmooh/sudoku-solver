@@ -6,13 +6,20 @@ N = 3
 
 def to_bool (value):
   result = [False for i in range (N**2)]
-  result[value - 1] = True
+  if value != 0:
+    result[value - 1] = True
   return result
 
 def to_value (bool):
   for i in range (len (bool)):
     if bool[i]:
       return i + 1
+  return 0
+
+def apply_on_grid (function, grid):
+  for line in grid:
+    for i in range (len (line)):
+      line[i] = function (line[i])
 
 def read_grid (filename):
   try:
