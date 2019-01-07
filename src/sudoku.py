@@ -66,6 +66,15 @@ def get_squares (grid):
       squares[N * (j/3) + (i/3)] += [line[i]]
   return squares
 
+def generate_z3_grid ():
+  grid = [[[[] for i in range (N**2)] for i in range (N**2)] for i in
+          range (N**2)]
+  for i in range (N**2):
+    for j in range (N**2):
+      for k in range (N**2):
+        grid[i][j][k] = Bool ("%d:%d:%d" % (i, j, k+1))
+  return grid
+
 filename = "example.txt"
 
 grid = read_grid (filename)
