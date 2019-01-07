@@ -4,6 +4,16 @@ import sys
 
 N = 3
 
+def to_bool (value):
+  result = [False for i in range (N**2)]
+  result[value - 1] = True
+  return result
+
+def to_value (bool):
+  for i in range (len (bool)):
+    if bool[i]:
+      return i + 1
+
 def read_grid (filename):
   try:
     file = open (filename, "r")
