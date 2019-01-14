@@ -115,8 +115,49 @@ def retreive_grid (z3_model, z3_grid):
           # print k
   return grid
 
-def usage (retval):
+def usage (retval, subject=None):
   prgname = sys.argv[0]
+  if subject != None:
+    if subject == "format":
+      message = textwrap.dedent ("""\
+      The input format is the following:
+        On the first line there must be written the N value
+        which is the size of the grid. With N=3 for 9x9 grid
+        format (3**2 = 9).
+
+        On the following lines there is the values of each lines
+        of the grid with 0 where the value is unknown.
+
+      For example:
+        3
+        3 0 7 6 0 0 0 0 2
+        0 6 0 0 0 8 7 0 5
+        5 0 2 0 0 0 0 0 0
+        1 0 0 8 6 5 0 7 9
+        0 0 0 2 0 3 0 0 0
+        8 3 0 7 4 9 0 0 6
+        0 0 0 0 0 0 4 0 1
+        6 0 8 1 0 0 0 5 0
+        7 0 0 0 0 6 2 0 8
+
+      For the following grid:
+        3     7 | 6       |       2
+           6    |       8 | 7     5
+        5     2 |         |
+        ---------+---------+---------
+        1       | 8  6  5 |    7  9
+                | 2     3 |
+        8  3    | 7  4  9 |       6
+        ---------+---------+---------
+                |         | 4     1
+        6     8 | 1       |    5
+        7       |       6 | 2     8
+      """)
+      print message
+      sys.exit (retval)
+    else:
+      sys.stderr.write ("Unknown subject for the help command.")
+      sys.exit (1)
   if retval == 0:
     message = textwrap.dedent ("""\
     Usage: %s [options]...
@@ -124,6 +165,8 @@ def usage (retval):
     for short options too.
     Options:
       -h, --help               Display this information.
+      --help=<subject>         Display the help about the given subject.
+                               Available subjects are: format..
       -v, --verbose            Display more information during execution.
       -p, --pretty             Prints the output the pretty way.
       -f, --file <file>        Use the sudoku as input.
@@ -143,11 +186,14 @@ def usage (retval):
 
 args = sys.argv[1:]
 optlist, args = getopt.getopt (args, "hvpf:o:",[
-  'help', 'verbose', 'file=', 'pretty', "output="
+  'help=', 'verbose', 'file=', 'pretty', "output="
 ])
 for o, a in optlist:
   if o in ('-h', '--help'):
-    usage (0)
+    if a != '':
+      usage (0, a)
+    else:
+      usage (0)
   elif o in ('-v', '--verbose'):
     verbose = True
   elif o in ('-p', '--pretty'):
