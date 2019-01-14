@@ -1,39 +1,48 @@
 #!/usr/bin/env python2.7
 from z3 import *
 import sys
+import getopt
+import textwrap
 
+verbose = False
+pretty = False
+output = None
+filename = None
 N = 3
 
-def pretty_print (grid):
-  for line in grid:
-    print line
+def pretty_string (grid):
+  out = ''
+  for i in range (N**2):
+    for j in range (N**2):
+      out += " %d " % grid [i][j]
+      if (j % 3 == 2) and (j != (N**2 - 1)):
+        out += "|"
+    write ("\n")
+    if (i % 3 == 2) and (i != (N**2 - 1)):
+      for k in range (N):
+        out += "-" * 3 * N
+        if k != N - 1:
+          out += "+"
+      out += "\n"
+  return out
 
-
-def to_bool (value):
-  result = [False for i in range (N**2)]
-  if value != 0:
-    result[value - 1] = True
-  return result
-
-def to_value (bool):
-  for i in range (len (bool)):
-    if bool[i]:
-      return i + 1
-  return 0
-
-def apply_on_grid (function, grid):
-  for line in grid:
-    for i in range (len (line)):
-      line[i] = function (line[i])
+def less_pretty_string (grid):
+  out = ''
+  for i in grid:
+    for v in i:
+      out += "%d " % (v)
+    out += "\n"
+    return out
 
 def read_grid (filename):
   try:
     file = open (filename, "r")
   except IOError:
-    print "Cannot open file", filename
+    sys.stderr.write ("Could not open file %s\n", % (filename))
     sys.exit (1)
   grid = []
   lines = file.readlines ()
+  file.close ()
   for line in lines:
     if line == '':
       print "The file must have", N, "lines"
@@ -89,8 +98,48 @@ def retreive_grid (z3_model, z3_grid):
           # print k
   return grid
 
+def usage (retval):
+  prgname = sys.argv[0]
+  if retval == 0:
+    message = textwrap.dedent ("""\
+    Usage: %s [options]...
+    Mandatory arguments to long options are mandatory
+    for short options too.
+    Options:
+      -h, --help               Display this information.
+      -v, --verbose            Display more information during execution.
+      -p, --pretty             Prints the output the pretty way.
+      -f, --file <file>        Use the sudoku as input.
+      -o, --output <file>      Write the result in the <file> output file.\
+    """ % prgname)
+    print message
+    sys.exit (retval)
+  else:
+    message = textwrap.dedent ("""\
+    Try '%s --help' for more information.\
+    """ % (prgname))
+    print message
+    sys.exit (retval)
 
-# filename = "example.txt"
+
+# Command line arguments parsing
+
+args = sys.argv[1:]
+optlist, args = getopt.getopt (args, "hvpf:o:",[
+  'help', 'verbose', 'file=', 'pretty', "output="
+])
+for o, a in optlist:
+  if o in ('-h', '--help'):
+    usage (0)
+  elif o in ('-v', '--verbose'):
+    verbose = True
+  elif o in ('-p', '--pretty'):
+    pretty = True
+  elif o in ('-f', '--file'):
+    filename = a
+  elif o in ('-o', '--output'):
+    output = a
+
 filename = "/home/brignone/Documents/Cours/M2/SAT-SMT-solving/sudoku-solver/src/example.txt"
 
 grid = read_grid (filename)
@@ -149,15 +198,29 @@ for i in get_squares (z3_grid):
     # print val
     solver.add (val)
 
+result_grid = None
 if solver.check () == sat:
   model = solver.model ()
-  grid = retreive_grid (model, z3_grid)
-  pretty_print (grid)
+  result_grid = retreive_grid (model, z3_grid)
+  grid_str = ''
+
+  # Is this pretty ?
+  if pretty:
+    grid_str = pretty_string (result_grid)
+  else:
+    grid_str = less_pretty_string (result_grid)
+
+  # Do I write it in file ?
+  if output != None:
+    try:
+      file = open (output, "w")
+    except IOError:
+      sys.stderr.write ("Could not open %s\n" % (output))
+      sys.exit (1)
+    file.write (grid_str)
+    file.close ()
+  else:
+    sys.stdout.write (grid_str)
+
 else:
   print "unsat"
-
-
-# a = Bool ('a')
-# b = Bool ('b')
-
-# solver.add (Or (a, b))
