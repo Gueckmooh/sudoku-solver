@@ -43,7 +43,8 @@ def read_grid (filename):
   grid = []
   lines = file.readlines ()
   file.close ()
-  for line in lines:
+  N = int (lines[0][0])
+  for line in lines[1:]:
     if line == '':
       print "The file must have", N, "lines"
       sys.exit (2)
