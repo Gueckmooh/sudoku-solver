@@ -9,17 +9,21 @@ verbose = False
 pretty = False
 output = None
 filename = None
+use_unsat_core = False
 N = 3
 
 def vprint (message):
   if verbose:
     sys.stdout.write (message)
 
-def pretty_string (grid):
+def pretty_string (grid, core=[]):
   out = ''
   for i in range (N**2):
     for j in range (N**2):
-      out += " %d " % grid [i][j]
+      if (i, j) in set (core):
+        out += " \033[0;31m%d\033[0m " % grid [i][j]
+      else:
+        out += " %d " % grid [i][j]
       if (j % 3 == 2) and (j != (N**2 - 1)):
         out += "|"
     out += "\n"
@@ -211,8 +215,8 @@ def usage (retval, subject=None):
 # Command line arguments parsing
 
 args = sys.argv[1:]
-optlist, args = getopt.getopt (args, "hvpf:o:",[
-  'help', 'verbose', 'file=', 'pretty', "output=", "help-topic="
+optlist, args = getopt.getopt (args, "hvpf:o:u",[
+  'help', 'verbose', 'file=', 'pretty', "output=", "help-topic=", "unsat-core"
 ])
 for o, a in optlist:
   if o in ('-h', '--help'):
@@ -227,6 +231,8 @@ for o, a in optlist:
     filename = a
   elif o in ('-o', '--output'):
     output = a
+  elif o in ('-u', '--unsat-core'):
+    use_unsat_core = True
 
 grid = None
 if filename != None:
@@ -239,6 +245,7 @@ z3_grid = generate_z3_grid ()
 
 vprint ("Creating solver\n")
 solver = Solver ()
+solver.set (unsat_core = True)
 
 # Each variables should have a positive value
 vprint ("Asserting that each Z3 variables should be positive..\n")
@@ -246,24 +253,36 @@ for i in z3_grid:
   for j in i:
     for k in j:
       val = k >= 0
-      solver.add (val)
+      if use_unsat_core:
+        solver.assert_and_track (val, "pos")
+      else:
+        solver.add (val)
+
+
+sat_core = []
+core_name_id = 0
 
 # Add default values to z3
 vprint ("Seting the default values for the sudoku grid..\n")
 for i in range (N**2):
   for j in range (N**2):
-    val = grid [i][j]
-    if val != 0:
-      val = z3_grid[i][j][val-1] == 1
-      # print val
-      solver.add (val)
+    v = grid [i][j]
+    if v != 0:
+      val = z3_grid[i][j][v-1] == 1
+      if use_unsat_core:
+        core_name = "init_val_%d" % (core_name_id)
+        core_name_id+=1
+        sat_core.insert (len (sat_core), (core_name, i, j))
+        solver.assert_and_track (val, core_name)
+      else:
+        solver.add (val)
+
 
 # Each cell should have exactly one value
 vprint ("Asserting that there must be exactly one value per cell..\n")
 for i in z3_grid:
   for j in i:
     val = Sum ([x for x in j]) == 1
-    # print val
     solver.add (val)
 
 # There must be only one iteration of each values in 1..N**2 per line
@@ -275,7 +294,6 @@ for i in get_lines (z3_grid):
     for v in range (N**2):
       l.insert (len (l), i[v][j])
     val = Sum (l) == 1
-    # print val
     solver.add (val)
 
 # There must be only one iteration of each values in 1..N**2 per columns
@@ -287,7 +305,6 @@ for i in get_columns (z3_grid):
     for v in range (N**2):
       l.insert (len (l), i[v][j])
     val = Sum (l) == 1
-    # print val
     solver.add (val)
 
 # There must be only one iteration of each values in 1..N**2 per square
@@ -299,7 +316,6 @@ for i in get_squares (z3_grid):
     for v in range (N**2):
       l.insert (len (l), i[v][j])
     val = Sum (l) == 1
-    # print val
     solver.add (val)
 
 result_grid = None
@@ -331,3 +347,14 @@ if solver.check () == sat:
 else:
   vprint ("It is not..\n")
   print "unsat"
+  if use_unsat_core:
+    core = solver.unsat_core ()
+    core_list = []
+    for c in core:
+      if c.decl().name() != "pos":
+        for n, i, j in sat_core:
+          if n == c.decl().name():
+            core_list.insert (len (core_list), (i, j))
+    string = pretty_string (grid, core_list)
+    print "Here is the unsat core:"
+    sys.stdout.write (re.sub ('0', ' ', string))
