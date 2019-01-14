@@ -25,7 +25,7 @@ def read_grid (filename):
   try:
     file = open (filename, "r")
   except IOError:
-    print ("Cannot open file ", filename)
+    print "Cannot open file", filename
     sys.exit (1)
   grid = []
   lines = file.readlines ()
@@ -55,7 +55,7 @@ def get_columns (grid):
   columns = [[] for i in range (N**2)]
   for line in grid:
     for i in range (len (line)):
-      columns[i] = columns[i] + [line [i]]
+      columns[i].insert (len(columns[i]), line [i])
   return columns
 
 def get_squares (grid):
@@ -67,15 +67,76 @@ def get_squares (grid):
   return squares
 
 def generate_z3_grid ():
-  grid = [[[[] for i in range (N**2)] for i in range (N**2)] for i in
-          range (N**2)]
+  grid = [ [ [Int ("x_%d_%d_%d" % (i, j, k)) for k in range (N**2)
+  ] for j in range (N**2)]
+  for i in range (N**2)]
+  return grid
+
+def retreive_grid (z3_model, z3_grid):
+  grid = [[0 for i in range (N**2)] for j in range (N**2)]
   for i in range (N**2):
     for j in range (N**2):
       for k in range (N**2):
-        grid[i][j][k] = Bool ("%d:%d:%d" % (i, j, k+1))
+        print z3_grid [i][j][k]
+        if z3_model [z3_grid [i][j][k]].as_long () != 0:
+
+          grid [i][j] = k
+          print k
   return grid
 
-filename = "example.txt"
+
+# filename = "example.txt"
+filename = "/home/brignone/Documents/Cours/M2/SAT-SMT-solving/sudoku-solver/src/example.txt"
 
 grid = read_grid (filename)
 check_grid (grid)
+z3_grid = generate_z3_grid ()
+
+solver = Solver ()
+
+# Add default values to z3
+for i in range (N**2):
+  for j in range (N**2):
+    val = grid [i][j]
+    if val != 0:
+      val = z3_grid[i][j][val-1] == 1
+      print val
+      solver.add (val)
+
+# Each cell should have exactly one value
+for i in z3_grid:
+  for j in i:
+    val = Sum ([x for x in j]) == 1
+    print val
+    solver.add (val)
+
+for i in get_lines (z3_grid):
+  for j in range (N**2):
+    l = []
+    for v in range (N**2):
+      l.insert (len (l), i[v][j])
+    val = Sum (l) == 1
+    print val
+    solver.add (val)
+
+for i in get_columns (z3_grid):
+  for j in i:
+    val = Sum (j) == 1
+    print val
+    solver.add (val)
+
+for i in get_squares (z3_grid):
+  for j in i:
+    val = Sum (j) == 1
+    print val
+    solver.add (val)
+
+solver.check ()
+model = solver.model ()
+
+retreive_grid (model, z3_grid)
+
+# a = Bool ('a')
+# b = Bool ('b')
+
+# solver.add (Or (a, b))
