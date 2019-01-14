@@ -4,6 +4,11 @@ import sys
 
 N = 3
 
+def pretty_print (grid):
+  for line in grid:
+    print line
+
+
 def to_bool (value):
   result = [False for i in range (N**2)]
   if value != 0:
@@ -77,11 +82,11 @@ def retreive_grid (z3_model, z3_grid):
   for i in range (N**2):
     for j in range (N**2):
       for k in range (N**2):
-        print z3_grid [i][j][k]
-        if z3_model [z3_grid [i][j][k]].as_long () != 0:
-
-          grid [i][j] = k
-          print k
+        v = z3_grid [i][j][k]
+        if z3_model [v].as_long () == 1:
+          # print z3_model [v]
+          grid [i][j] = k + 1
+          # print k
   return grid
 
 
@@ -94,20 +99,27 @@ z3_grid = generate_z3_grid ()
 
 solver = Solver ()
 
+for i in z3_grid:
+  for j in i:
+    for k in j:
+      val = k >= 0
+      # print val
+      solver.add (val)
+
 # Add default values to z3
 for i in range (N**2):
   for j in range (N**2):
     val = grid [i][j]
     if val != 0:
       val = z3_grid[i][j][val-1] == 1
-      print val
+      # print val
       solver.add (val)
 
 # Each cell should have exactly one value
 for i in z3_grid:
   for j in i:
     val = Sum ([x for x in j]) == 1
-    print val
+    # print val
     solver.add (val)
 
 for i in get_lines (z3_grid):
@@ -116,25 +128,34 @@ for i in get_lines (z3_grid):
     for v in range (N**2):
       l.insert (len (l), i[v][j])
     val = Sum (l) == 1
-    print val
+    # print val
     solver.add (val)
 
 for i in get_columns (z3_grid):
-  for j in i:
-    val = Sum (j) == 1
-    print val
+  for j in range (N**2):
+    l = []
+    for v in range (N**2):
+      l.insert (len (l), i[v][j])
+    val = Sum (l) == 1
+    # print val
     solver.add (val)
 
 for i in get_squares (z3_grid):
-  for j in i:
-    val = Sum (j) == 1
-    print val
+  for j in range (N**2):
+    l = []
+    for v in range (N**2):
+      l.insert (len (l), i[v][j])
+    val = Sum (l) == 1
+    # print val
     solver.add (val)
 
-solver.check ()
-model = solver.model ()
+if solver.check () == sat:
+  model = solver.model ()
+  grid = retreive_grid (model, z3_grid)
+  pretty_print (grid)
+else:
+  print "unsat"
 
-retreive_grid (model, z3_grid)
 
 # a = Bool ('a')
 # b = Bool ('b')
