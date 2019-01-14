@@ -17,7 +17,7 @@ def pretty_string (grid):
       out += " %d " % grid [i][j]
       if (j % 3 == 2) and (j != (N**2 - 1)):
         out += "|"
-    write ("\n")
+    out += "\n"
     if (i % 3 == 2) and (i != (N**2 - 1)):
       for k in range (N):
         out += "-" * 3 * N
@@ -32,13 +32,13 @@ def less_pretty_string (grid):
     for v in i:
       out += "%d " % (v)
     out += "\n"
-    return out
+  return out
 
 def read_grid (filename):
   try:
     file = open (filename, "r")
   except IOError:
-    sys.stderr.write ("Could not open file %s\n", % (filename))
+    sys.stderr.write ("Could not open file %s\n" % (filename))
     sys.exit (1)
   grid = []
   lines = file.readlines ()
@@ -48,6 +48,23 @@ def read_grid (filename):
       print "The file must have", N, "lines"
       sys.exit (2)
     line = line.split (" ")
+    T = [int(x) for x in line]
+    if grid == []:
+      grid = [T]
+    else:
+      grid = grid + [T]
+  return grid
+
+def read_grid_from_command ():
+  N = int (raw_input ("Give the size of the grid (for 9x9 grid give 3 (3**2 = 9)): "))
+  lines = []
+  print "Give the %d lines of the grid" % (N**2)
+  grid = []
+  for i in range (N**2):
+    l = raw_input ()
+    lines.insert (len (lines), l)
+  for line in lines:
+    line = line.split ()
     T = [int(x) for x in line]
     if grid == []:
       grid = [T]
@@ -140,9 +157,14 @@ for o, a in optlist:
   elif o in ('-o', '--output'):
     output = a
 
-filename = "/home/brignone/Documents/Cours/M2/SAT-SMT-solving/sudoku-solver/src/example.txt"
+# filename = "/home/brignone/Documents/Cours/M2/SAT-SMT-solving/sudoku-solver/src/example.txt"
 
-grid = read_grid (filename)
+grid = None
+if filename != None:
+  grid = read_grid (filename)
+else:
+  grid = read_grid_from_command ()
+
 check_grid (grid)
 z3_grid = generate_z3_grid ()
 
