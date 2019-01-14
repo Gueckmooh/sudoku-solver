@@ -27,7 +27,7 @@ def pretty_string (grid):
   return out
 
 def less_pretty_string (grid):
-  out = ''
+  out = "%d\n" % (N)
   for i in grid:
     for v in i:
       out += "%d " % (v)
@@ -156,8 +156,16 @@ def usage (retval, subject=None):
       """)
       print message
       sys.exit (retval)
+    if subject == "pretty":
+      message = textwrap.dedent ("""\
+      If the pretty option is given the output will be a table with
+      pipes and dashes to separate each squares.
+      Otherwise the output will of the same kind than the input format.\
+      """)
+      print message
+      sys.exit (retval)
     else:
-      sys.stderr.write ("Unknown subject for the help command.")
+      sys.stderr.write ("Unknown subject for the help command.\n")
       sys.exit (1)
   if retval == 0:
     message = textwrap.dedent ("""\
@@ -166,8 +174,8 @@ def usage (retval, subject=None):
     for short options too.
     Options:
       -h, --help               Display this information.
-      --help=<subject>         Display the help about the given subject.
-                               Available subjects are: format..
+      --help-topic=<topic>     Display the help about the given topic.
+                               Available topics are: format, pretty..
       -v, --verbose            Display more information during execution.
       -p, --pretty             Prints the output the pretty way.
       -f, --file <file>        Use the sudoku as input.
@@ -187,14 +195,13 @@ def usage (retval, subject=None):
 
 args = sys.argv[1:]
 optlist, args = getopt.getopt (args, "hvpf:o:",[
-  'help=', 'verbose', 'file=', 'pretty', "output="
+  'help', 'verbose', 'file=', 'pretty', "output=", "help-topic="
 ])
 for o, a in optlist:
   if o in ('-h', '--help'):
-    if a != '':
-      usage (0, a)
-    else:
-      usage (0)
+    usage (0)
+  elif o in ('--help-topic'):
+    usage (0, a)
   elif o in ('-v', '--verbose'):
     verbose = True
   elif o in ('-p', '--pretty'):
