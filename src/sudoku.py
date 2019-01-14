@@ -3,12 +3,17 @@ from z3 import *
 import sys
 import getopt
 import textwrap
+import re
 
 verbose = False
 pretty = False
 output = None
 filename = None
 N = 3
+
+def vprint (message):
+  if verbose:
+    sys.stdout.write (message)
 
 def pretty_string (grid):
   out = ''
@@ -35,10 +40,11 @@ def less_pretty_string (grid):
   return out
 
 def read_grid (filename):
+  vprint ("Reading grid from %s\n" % (filename))
   try:
     file = open (filename, "r")
   except IOError:
-    sys.stderr.write ("Could not open file %s\n" % (filename))
+    sys.stderr.write ("Could not open file %s...\n" % (filename))
     sys.exit (1)
   grid = []
   lines = file.readlines ()
@@ -54,9 +60,14 @@ def read_grid (filename):
       grid = [T]
     else:
       grid = grid + [T]
+  if verbose:
+    gstr = pretty_string (grid)
+    print "Grid red from file:"
+    sys.stdout.write (re.sub ('0', ' ', gstr))
   return grid
 
 def read_grid_from_command ():
+  vprint ("Reading grid from command line...\n")
   N = int (raw_input ("Give the size of the grid (for 9x9 grid give 3 (3**2 = 9)): "))
   lines = []
   print "Give the %d lines of the grid" % (N**2)
@@ -71,14 +82,20 @@ def read_grid_from_command ():
       grid = [T]
     else:
       grid = grid + [T]
+  if verbose:
+    gstr = pretty_string (grid)
+    print "Grid red from command line:"
+    sys.stdout.write (re.sub ('0', ' ', gstr))
   return grid
 
 def check_grid (grid):
+  vprint ("Checking wether the grid is correct or not...\n")
   assert len (grid) == N**2
   for line in grid:
     assert len (line) == N**2
     for value in line:
       assert value >= 0 and value <= 9
+  vprint ("Grid is correct !\n")
 
 def get_lines (grid):
   return grid
@@ -99,21 +116,21 @@ def get_squares (grid):
   return squares
 
 def generate_z3_grid ():
+  vprint ("Generation of the grid of Z3 variables...\n")
   grid = [ [ [Int ("x_%d_%d_%d" % (i, j, k)) for k in range (N**2)
   ] for j in range (N**2)]
   for i in range (N**2)]
   return grid
 
 def retreive_grid (z3_model, z3_grid):
+  vprint ("Retreiving grid from Z3 variables...\n")
   grid = [[0 for i in range (N**2)] for j in range (N**2)]
   for i in range (N**2):
     for j in range (N**2):
       for k in range (N**2):
         v = z3_grid [i][j][k]
         if z3_model [v].as_long () == 1:
-          # print z3_model [v]
           grid [i][j] = k + 1
-          # print k
   return grid
 
 def usage (retval, subject=None):
@@ -211,8 +228,6 @@ for o, a in optlist:
   elif o in ('-o', '--output'):
     output = a
 
-# filename = "/home/brignone/Documents/Cours/M2/SAT-SMT-solving/sudoku-solver/src/example.txt"
-
 grid = None
 if filename != None:
   grid = read_grid (filename)
@@ -222,16 +237,19 @@ else:
 check_grid (grid)
 z3_grid = generate_z3_grid ()
 
+vprint ("Creating solver\n")
 solver = Solver ()
 
+# Each variables should have a positive value
+vprint ("Asserting that each Z3 variables should be positive..\n")
 for i in z3_grid:
   for j in i:
     for k in j:
       val = k >= 0
-      # print val
       solver.add (val)
 
 # Add default values to z3
+vprint ("Seting the default values for the sudoku grid..\n")
 for i in range (N**2):
   for j in range (N**2):
     val = grid [i][j]
@@ -241,12 +259,16 @@ for i in range (N**2):
       solver.add (val)
 
 # Each cell should have exactly one value
+vprint ("Asserting that there must be exactly one value per cell..\n")
 for i in z3_grid:
   for j in i:
     val = Sum ([x for x in j]) == 1
     # print val
     solver.add (val)
 
+# There must be only one iteration of each values in 1..N**2 per line
+vprint ("Asserting that there must be only one iteration of each values in "
+        "1..%d per line..\n" % (N**2))
 for i in get_lines (z3_grid):
   for j in range (N**2):
     l = []
@@ -256,6 +278,9 @@ for i in get_lines (z3_grid):
     # print val
     solver.add (val)
 
+# There must be only one iteration of each values in 1..N**2 per columns
+vprint ("Asserting that there must be only one iteration of each values in "
+        "1..%d per columns..\n" % (N**2))
 for i in get_columns (z3_grid):
   for j in range (N**2):
     l = []
@@ -265,6 +290,9 @@ for i in get_columns (z3_grid):
     # print val
     solver.add (val)
 
+# There must be only one iteration of each values in 1..N**2 per square
+vprint ("Asserting that there must be only one iteration of each values in "
+        "1..%d per square..\n" % (N**2))
 for i in get_squares (z3_grid):
   for j in range (N**2):
     l = []
@@ -275,7 +303,9 @@ for i in get_squares (z3_grid):
     solver.add (val)
 
 result_grid = None
+vprint ("Checking wether the instance is satifiable..\n")
 if solver.check () == sat:
+  vprint ("It is !\n")
   model = solver.model ()
   result_grid = retreive_grid (model, z3_grid)
   grid_str = ''
@@ -299,4 +329,5 @@ if solver.check () == sat:
     sys.stdout.write (grid_str)
 
 else:
+  vprint ("It is not..\n")
   print "unsat"
