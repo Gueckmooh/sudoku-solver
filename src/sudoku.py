@@ -10,7 +10,7 @@ pretty = False
 output = None
 filename = None
 use_unsat_core = False
-N = 3
+N = None
 
 def vprint (message):
   if verbose:
@@ -24,10 +24,10 @@ def pretty_string (grid, core=[]):
         out += " \033[0;31m%d\033[0m " % grid [i][j]
       else:
         out += " %d " % grid [i][j]
-      if (j % 3 == 2) and (j != (N**2 - 1)):
+      if (j % N == 2) and (j != (N**2 - 1)):
         out += "|"
     out += "\n"
-    if (i % 3 == 2) and (i != (N**2 - 1)):
+    if (i % N == 2) and (i != (N**2 - 1)):
       for k in range (N):
         out += "-" * 3 * N
         if k != N - 1:
@@ -44,6 +44,7 @@ def less_pretty_string (grid):
   return out
 
 def read_grid (filename):
+  global N
   vprint ("Reading grid from %s\n" % (filename))
   try:
     file = open (filename, "r")
@@ -116,7 +117,7 @@ def get_squares (grid):
   for j in range (len (grid)):
     line = grid [j]
     for i in range (len (line)):
-      squares[N * (j/3) + (i/3)] += [line[i]]
+      squares[N * (j/N) + (i/N)] += [line[i]]
   return squares
 
 def generate_z3_grid ():
@@ -200,7 +201,8 @@ def usage (retval, subject=None):
       -v, --verbose            Display more information during execution.
       -p, --pretty             Prints the output the pretty way.
       -f, --file <file>        Use the sudoku as input.
-      -o, --output <file>      Write the result in the <file> output file.\
+      -o, --output <file>      Write the result in the <file> output file.
+      -u, --unsat-core         Use unsat core to see what is wrong.\
     """ % prgname)
     print message
     sys.exit (retval)
