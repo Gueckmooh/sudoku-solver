@@ -10,3 +10,7 @@
 #+SELECT_TAGS: export
 #+EXCLUDE_TAGS: noexport
 #+CREATOR: Emacs 25.1.1 (Org mode 9.1.14)
+
+Sorry for Python2.7
+
+-> Type =python2.7 sudoku --help= for more informations
